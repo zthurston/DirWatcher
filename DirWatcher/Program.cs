@@ -1,3 +1,4 @@
+﻿using CommandLine;
 using System;
 
 namespace DirWatcher
@@ -6,7 +7,9 @@ namespace DirWatcher
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            IDirWatcher watcher = new DirWatcher();
+            Parser.Default.ParseArguments<CommandLineOptions>(args)
+                .WithParsed(o => watcher.Run(o));
         }
     }
 }
