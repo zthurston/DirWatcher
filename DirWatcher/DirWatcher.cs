@@ -1,9 +1,10 @@
-﻿using DirWatcher.Models;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using DirWatcher.Models;
 
 namespace DirWatcher
 {
@@ -36,8 +37,13 @@ namespace DirWatcher
                 while (!token.IsCancellationRequested)
                 {
                     Console.WriteLine("Scanning...");
-                    var files = Directory.GetFiles(WatchDirectory, WatchPattern);
-                    OnDirectoryScanned?.Invoke(new DirectoryScannedEventArgs(WatchDirectory, files));
+                    var filePathModificationTimes = new Dictionary<string, DateTime>();
+                    foreach(string filePath in Directory.GetFiles(WatchDirectory, WatchPattern))
+                    {
+                        filePathModificationTimes.Add(filePath, File.GetLastWriteTimeUtc(filePath));
+                    }
+
+                    OnDirectoryScanned?.Invoke(new DirectoryScannedEventArgs(WatchDirectory, filePathModificationTimes));
 
                     if (!token.IsCancellationRequested)
                         await Task.Delay(RefreshInterval, token);

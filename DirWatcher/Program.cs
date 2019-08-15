@@ -9,7 +9,11 @@ namespace DirWatcher
 {
     class Program
     {
+#if DEBUG
         const int ScanIntervalMs = 1_000;
+#else
+        const int ScanIntervalMs = 10_000_000;
+#endif
         static CancellationTokenSource CancellationTokenSource;
         static IDirWatcher Watcher;
 
@@ -52,7 +56,10 @@ namespace DirWatcher
 
         private static void OnDirectoryScanned(DirectoryScannedEventArgs eventArgs)
         {
-            Console.WriteLine($"Found files: {string.Join(' ', eventArgs.FilePaths)} in {eventArgs.Directory} at {eventArgs.TimeStamp.ToLocalTime()}");
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Found files: {string.Join(' ', eventArgs.FilePathModificationTimes.Keys)} in {eventArgs.Directory} at {eventArgs.TimeStamp.ToLocalTime()}");
+            });
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)

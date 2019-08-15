@@ -5,14 +5,14 @@ namespace DirWatcher.Models
 {
     public class DirectoryScannedEventArgs : EventArgs
     {
-        public DirectoryScannedEventArgs(string directory, ICollection<string> filePaths)
+        public DirectoryScannedEventArgs(string directory, IDictionary<string, DateTime> filePathModificationTimes)
         {
             Directory = directory;
-            FilePaths = filePaths;
+            FilePathModificationTimes = filePathModificationTimes;
         }
 
         public string Directory { get; }
-        public ICollection<string> FilePaths { get; }
+        public IDictionary<string, DateTime> FilePathModificationTimes { get; }
         public DateTime TimeStamp { get; } = DateTime.UtcNow;
     }
 }
