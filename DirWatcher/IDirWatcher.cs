@@ -1,7 +1,12 @@
-﻿namespace DirWatcher
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace DirWatcher
 {
     public interface IDirWatcher
     {
-        void Run(CommandLineOptions options);
+        event DirectoryScanned OnDirectoryScanned;
+
+        Task Run(CancellationToken token);
     }
 }
