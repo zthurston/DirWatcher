@@ -16,6 +16,7 @@ namespace DirWatcher
 #endif
         static CancellationTokenSource CancellationTokenSource;
         static IDirWatcher Watcher;
+        static IDirectoryStateTracker StateTracker;
 
         static async Task<int> Main(string[] args)
         {
@@ -50,8 +51,38 @@ namespace DirWatcher
         {
             Watcher = new DirWatcher(TimeSpan.FromMilliseconds(ScanIntervalMs),
                        options.Directory, options.WatchPattern);
-
             Watcher.OnDirectoryScanned += OnDirectoryScanned;
+
+            StateTracker = new DirectoryStateTracker();
+            Watcher.OnDirectoryScanned += StateTracker.OnDirectoryScanned;
+
+            StateTracker.OnNewFileScanned += StateTracker_OnNewFileScanned;
+            StateTracker.OnTrackedFileModified += StateTracker_OnTrackedFileModified;
+            StateTracker.OnTrackedFileMissing += StateTracker_OnTrackedFileMissing;
+        }
+
+        private static void StateTracker_OnTrackedFileMissing(TrackedFileEventArgs eventArgs)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Tracked file missing:  {eventArgs.Path} at {eventArgs.TimeStamp.TimeOfDay}");
+            });
+        }
+
+        private static void StateTracker_OnNewFileScanned(TrackedFileEventArgs eventArgs)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"New file scanned: {eventArgs.Path} at {eventArgs.TimeStamp.TimeOfDay}");
+            });
+        }
+
+        private static void StateTracker_OnTrackedFileModified(TrackedFileEventArgs eventArgs)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Tracked file Modified: {eventArgs.Path} at {eventArgs.TimeStamp.TimeOfDay}");
+            });
         }
 
         private static void OnDirectoryScanned(DirectoryScannedEventArgs eventArgs)
@@ -74,6 +105,13 @@ namespace DirWatcher
             // clean everything up anyway.
             Console.CancelKeyPress -= Console_CancelKeyPress;
             Watcher.OnDirectoryScanned -= OnDirectoryScanned;
+            Watcher.OnDirectoryScanned -= StateTracker.OnDirectoryScanned;
+
+            StateTracker.OnNewFileScanned -= StateTracker_OnNewFileScanned;
+            StateTracker.OnTrackedFileModified -= StateTracker_OnTrackedFileModified;
+            StateTracker.OnTrackedFileMissing -= StateTracker_OnTrackedFileMissing;
+
+            CancellationTokenSource?.Dispose();
         }
     }
 }
