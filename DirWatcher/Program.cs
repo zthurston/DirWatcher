@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
 using DirWatcher.Models;
+using DirWatcher.Tasks;
 
 namespace DirWatcher
 {
@@ -15,11 +16,18 @@ namespace DirWatcher
         const int ScanIntervalMs = 10_000_000;
 #endif
         static CancellationTokenSource CancellationTokenSource;
+        static CancellableTaskRunner CancellableTaskRunner;
         static IDirWatcher Watcher;
         static IDirectoryStateTracker StateTracker;
+        static ILineCounter LineCounter;
+        static ILineCountTracker LineCountTracker;
 
         static async Task<int> Main(string[] args)
         {
+#if DEBUG
+            // args = new string[] { @"C:\Users\zthurston\Downloads\Test Folder\", "A.*" };
+            args = new string[] { @"\\localhost\Test Folder", "*.txt" };
+#endif
 
             CancellationTokenSource = new CancellationTokenSource();
             Console.CancelKeyPress += Console_CancelKeyPress;
@@ -59,6 +67,34 @@ namespace DirWatcher
             StateTracker.OnNewFileScanned += StateTracker_OnNewFileScanned;
             StateTracker.OnTrackedFileModified += StateTracker_OnTrackedFileModified;
             StateTracker.OnTrackedFileMissing += StateTracker_OnTrackedFileMissing;
+
+            LineCounter = new MockLineCounter(CancellationTokenSource.Token);
+            CancellableTaskRunner = new CancellableTaskRunner((task, onCancel) => new CancellableTask(task, onCancel));
+            LineCountTracker = new LineCountTracker(CancellationTokenSource.Token, CancellableTaskRunner, LineCounter);
+
+            StateTracker.OnNewFileScanned += LineCountTracker.OnFileChanged;
+            StateTracker.OnTrackedFileModified += LineCountTracker.OnFileChanged;
+            StateTracker.OnTrackedFileMissing += LineCountTracker.OnFileRemoved;
+            LineCountTracker.OnLineCountCreated += LineCountTracker_OnLineCountCreated;
+            LineCountTracker.OnLineCountUpdated += LineCountTracker_OnLineCountUpdated;
+        }
+
+        private static void LineCountTracker_OnLineCountUpdated(LineCountUpdatedEventArgs args)
+        {
+            Task.Run(() =>
+            {
+                int delta = args.Current.Count - args.Previous.Count;
+                char indicator = delta >= 0 ? '+' : '-';
+                Console.WriteLine($"File: {args.FilePath} Line count Changed:{indicator}{Math.Abs(delta)}");
+            });
+        }
+
+        private static void LineCountTracker_OnLineCountCreated(LineCountCreatedEventArgs args)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"File: {args.FilePath} Line count: {args.Current.Count}");
+            });
         }
 
         private static void StateTracker_OnTrackedFileMissing(TrackedFileEventArgs eventArgs)
@@ -111,6 +147,13 @@ namespace DirWatcher
             StateTracker.OnTrackedFileModified -= StateTracker_OnTrackedFileModified;
             StateTracker.OnTrackedFileMissing -= StateTracker_OnTrackedFileMissing;
 
+            StateTracker.OnNewFileScanned -= LineCountTracker.OnFileChanged;
+            StateTracker.OnTrackedFileModified -= LineCountTracker.OnFileChanged;
+            LineCountTracker.OnLineCountCreated -= LineCountTracker_OnLineCountCreated;
+            LineCountTracker.OnLineCountUpdated -= LineCountTracker_OnLineCountUpdated;
+            StateTracker.OnTrackedFileMissing -= LineCountTracker.OnFileRemoved;
+
+            CancellableTaskRunner?.Dispose();
             CancellationTokenSource?.Dispose();
         }
     }
