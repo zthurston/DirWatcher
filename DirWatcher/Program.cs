@@ -53,7 +53,7 @@ namespace DirWatcher
                        options.Directory, options.WatchPattern);
             Watcher.OnDirectoryScanned += OnDirectoryScanned;
 
-            StateTracker = new DirectoryStateTracker();
+            StateTracker = new DirectoryStateTracker(CancellationTokenSource.Token);
             Watcher.OnDirectoryScanned += StateTracker.OnDirectoryScanned;
 
             StateTracker.OnNewFileScanned += StateTracker_OnNewFileScanned;

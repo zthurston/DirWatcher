@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using DirWatcher.Models;
 
 namespace DirWatcher
@@ -11,15 +12,24 @@ namespace DirWatcher
 
     public class DirectoryStateTracker : IDirectoryStateTracker
     {
+        public DirectoryStateTracker(CancellationToken cancellationToken)
+        {
+            CancellationToken = cancellationToken;
+        }
+
         public event NewFileScanned OnNewFileScanned;
         public event TrackedFileModified OnTrackedFileModified;
         public event TrackedFileMissing OnTrackedFileMissing;
 
+        protected CancellationToken CancellationToken { get; }
         protected IDictionary<string, DateTime> TrackedPaths = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
         public void OnDirectoryScanned(DirectoryScannedEventArgs eventArgs)
         {
             eventArgs = eventArgs ?? throw new ArgumentNullException(nameof(eventArgs));
+
+            if (CancellationToken.IsCancellationRequested)
+                return;
 
             CheckForNewOrModifiedFiles(eventArgs);
 
