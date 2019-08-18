@@ -45,7 +45,9 @@ namespace DirWatcher
         {
             try
             {
+                Console.WriteLine("Starting Watcher");
                 await Task.Run(() => Watcher.Run(CancellationTokenSource.Token));
+                Console.WriteLine("Finished Watcher");
             }
             finally
             {
@@ -134,7 +136,8 @@ namespace DirWatcher
         {
             Task.Run(() =>
             {
-                Console.WriteLine($"Found files: {string.Join(' ', eventArgs.FilePathModificationTimes.Keys)} in {eventArgs.Directory} at {eventArgs.TimeStamp.ToLocalTime()}");
+                Console.WriteLine($"Scanning for changes at {DateTime.UtcNow.TimeOfDay}");
+                // Console.WriteLine($"Found files: {string.Join(' ', eventArgs.FilePathModificationTimes.Keys)} in {eventArgs.Directory} at {eventArgs.TimeStamp.ToLocalTime()}");
             });
         }
 

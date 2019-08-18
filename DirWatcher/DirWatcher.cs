@@ -30,13 +30,10 @@ namespace DirWatcher
 
         public async Task Run(CancellationToken token)
         {
-            Console.WriteLine("Starting Watch...");
-
             try
             {
                 while (!token.IsCancellationRequested)
                 {
-                    Console.WriteLine("Scanning...");
                     var filePathModificationTimes = new Dictionary<string, DateTime>();
                     foreach(string filePath in Directory.GetFiles(WatchDirectory, WatchPattern))
                     {
@@ -58,8 +55,6 @@ namespace DirWatcher
                 Debug.WriteLine($"{nameof(DirWatcher)}.{nameof(Run)} exception: {ex.ToString()}");
                 throw;
             }
-
-            Console.WriteLine("Finished watch");
         }
     }
 }
