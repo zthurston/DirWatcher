@@ -71,12 +71,21 @@ namespace DirWatcher
             LineCounter = new MockLineCounter(CancellationTokenSource.Token);
             CancellableTaskRunner = new CancellableTaskRunner((task, onCancel) => new CancellableTask(task, onCancel));
             LineCountTracker = new LineCountTracker(CancellationTokenSource.Token, CancellableTaskRunner, LineCounter);
+            LineCountTracker.OnLineCountFailed += LineCountTracker_OnLineCountFailed;
 
             StateTracker.OnNewFileScanned += LineCountTracker.OnFileChanged;
             StateTracker.OnTrackedFileModified += LineCountTracker.OnFileChanged;
             StateTracker.OnTrackedFileMissing += LineCountTracker.OnFileRemoved;
             LineCountTracker.OnLineCountCreated += LineCountTracker_OnLineCountCreated;
             LineCountTracker.OnLineCountUpdated += LineCountTracker_OnLineCountUpdated;
+        }
+
+        private static void LineCountTracker_OnLineCountFailed(LineCountFailedEventArgs args)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Counting lines for file: {args.FilePath} failed: {args.Exception}");
+            });
         }
 
         private static void LineCountTracker_OnLineCountUpdated(LineCountUpdatedEventArgs args)
@@ -151,6 +160,7 @@ namespace DirWatcher
             StateTracker.OnTrackedFileModified -= LineCountTracker.OnFileChanged;
             LineCountTracker.OnLineCountCreated -= LineCountTracker_OnLineCountCreated;
             LineCountTracker.OnLineCountUpdated -= LineCountTracker_OnLineCountUpdated;
+            LineCountTracker.OnLineCountFailed -= LineCountTracker_OnLineCountFailed;
             StateTracker.OnTrackedFileMissing -= LineCountTracker.OnFileRemoved;
 
             CancellableTaskRunner?.Dispose();

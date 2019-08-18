@@ -6,6 +6,7 @@ namespace DirWatcher
     {
         event LineCountCreated OnLineCountCreated;
         event LineCountUpdated OnLineCountUpdated;
+        event LineCountFailed OnLineCountFailed;
 
         void OnFileChanged(TrackedFileEventArgs file);
         void OnFileRemoved(TrackedFileEventArgs file);

@@ -10,6 +10,7 @@ namespace DirWatcher
 {
     public delegate void LineCountCreated(LineCountCreatedEventArgs args);
     public delegate void LineCountUpdated(LineCountUpdatedEventArgs args);
+    public delegate void LineCountFailed(LineCountFailedEventArgs args);
     public class LineCountTracker : ILineCountTracker
     {
         public LineCountTracker(
@@ -27,6 +28,7 @@ namespace DirWatcher
 
         public event LineCountCreated OnLineCountCreated;
         public event LineCountUpdated OnLineCountUpdated;
+        public event LineCountFailed OnLineCountFailed;
 
         protected Dictionary<string, ICancellableTask> OutstandingLineCounts { get; }
         protected Dictionary<string, LineCount> PathLineCounts { get; }
@@ -41,19 +43,29 @@ namespace DirWatcher
 
             var filePath = file.Path;
 
+            ICancellableTask task = null;
             // Check if we have an outstanding line count task. If we don't, kick one off
             lock (OutstandingLineCounts)
             {
                 if (!OutstandingLineCounts.ContainsKey(filePath))
                 {
                     // kick off and add line count task
-                    var ct = CancellableTaskRunner.Run(async token =>
+                    task = CancellableTaskRunner.Run(async token =>
                     {
                         await CalculateLineCount(filePath, token);
                     }, onThreadPoolThread: true);
-                    OutstandingLineCounts.Add(filePath, ct);
+                 
+                    OutstandingLineCounts.Add(filePath, task);
                 }
             }
+
+            task?.Task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    OnLineCountFailed?.Invoke(new LineCountFailedEventArgs(filePath, t.Exception));
+                }
+            });
         }
 
         public void OnFileRemoved(TrackedFileEventArgs file)
@@ -63,13 +75,7 @@ namespace DirWatcher
             lock (OutstandingLineCounts)
             {
                 if (OutstandingLineCounts.TryGetValue(filePath, out var task))
-                {
                     task.Cancel();
-                }
-                else
-                {
-                    var foo = 1;
-                }
             }
 
             lock (PathLineCounts)
