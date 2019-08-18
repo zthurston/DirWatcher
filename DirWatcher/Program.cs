@@ -70,7 +70,7 @@ namespace DirWatcher
             StateTracker.OnTrackedFileModified += StateTracker_OnTrackedFileModified;
             StateTracker.OnTrackedFileMissing += StateTracker_OnTrackedFileMissing;
 
-            LineCounter = new MockLineCounter(CancellationTokenSource.Token);
+            LineCounter = new LineCounter(CancellationTokenSource.Token);
             CancellableTaskRunner = new CancellableTaskRunner((task, onCancel) => new CancellableTask(task, onCancel));
             LineCountTracker = new LineCountTracker(CancellationTokenSource.Token, CancellableTaskRunner, LineCounter);
             LineCountTracker.OnLineCountFailed += LineCountTracker_OnLineCountFailed;
