@@ -28,14 +28,16 @@ namespace DirWatcher.Tasks
                 ? Task.Run(() => func.Invoke(cts.Token))
                 : func.Invoke(cts.Token);
 
-            return CancellableTaskFactory.Invoke(runningTask, () =>
-            {
-                using (cts)
-                    cts.Cancel();
+            runningTask.ContinueWith(task => RemoveAndDispose(cts));
 
-                lock (Disposables)
-                    Disposables.Remove(cts);
-            });
+            return CancellableTaskFactory.Invoke(runningTask, () => cts.Cancel());
+        }
+
+        protected void RemoveAndDispose(CancellationTokenSource cts)
+        {
+            cts.Dispose();
+            lock (Disposables)
+                Disposables.Remove(cts);
         }
 
         protected CancellationTokenSource CreateCancellationTokenSource()
